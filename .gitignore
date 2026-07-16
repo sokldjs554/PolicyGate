@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+*.db
+.venv/
+.pytest_cache/
+
+# 개인용 문서 — 절대 공개 저장소에 올리지 않는다
+docs/INTERVIEW_PREP.md
+docs/RESUME_DRAFT.md
+docs/NOTION_DRAFT.md

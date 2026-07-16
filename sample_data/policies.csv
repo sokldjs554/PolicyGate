@@ -1,0 +1,13 @@
+rule_id,src,dst,protocol,dst_ports,action,priority,description,owner,expires_at
+FW-0001,10.0.0.0/16,10.20.0.10/32,tcp,443,allow,10,웹서비스 -> API 게이트웨이 HTTPS,platform-team,
+FW-0002,10.0.1.0/24,10.20.0.10/32,tcp,443,allow,20,결제서비스 -> API 게이트웨이 HTTPS,payment-team,
+FW-0003,10.5.0.0/24,10.30.0.20/32,tcp,3306,allow,30,정산 배치 -> 정산DB,settlement-team,
+FW-0004,10.5.0.0/24,10.30.0.20/32,tcp,3306,deny,40,정산DB 접근 차단(퇴역 예정),legacy-team,
+FW-0005,any,10.40.0.5/32,tcp,443,allow,50,공개 웹서버 HTTPS,web-team,
+FW-0006,any,10.40.0.5/32,tcp,22,allow,60,임시 외부 SSH(점검용),,2026-01-31T00:00:00+00:00
+FW-0007,any,10.40.0.9/32,tcp,3389,allow,70,외부 협력사 RDP 접속,vendor-team,
+FW-0008,10.9.0.0/24,10.30.0.0/24,any,any,allow,80,개발망 -> DB존 전체 허용(임시),,
+FW-0009,10.0.0.0/8,any,icmp,any,allow,90,내부망 ping 허용,network-team,
+FW-0010,10.7.0.0/24,10.20.0.10/32,tcp,8443,allow,100,관리 콘솔 접근,platform-team,
+FW-0011,10.7.0.0/25,10.20.0.10/32,tcp,8443,allow,110,관리 콘솔 접근(중복 신청),platform-team,
+FW-0012,10.11.0.0/24,10.30.0.30/32,tcp,6379,allow,120,캐시서버 Redis 접근,cache-team,

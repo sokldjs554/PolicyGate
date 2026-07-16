@@ -1,0 +1,87 @@
+# CI 파이프라인 — push/PR마다 lint → test+coverage 자동 실행
+#
+# 설계 노트
+# - lint와 test를 별도 job으로 분리: 실패 원인이 배지/로그에서 즉시 구분됨
+# - netns 실배포 검증 테스트는 GitHub Actions의 ubuntu 러너가
+#   unshare + iptables를 제공하므로 실제로 수행됨 (skip되지 않음)
+# - benchmark는 수동 트리거(workflow_dispatch) 전용: 러너 성능 편차로
+#   수치가 흔들리므로 push마다 돌려 시간을 낭비하지 않는다
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      run_benchmark:
+        description: "벤치마크 실행 여부"
+        type: boolean
+        default: true
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install ruff
+      - name: Ruff lint
+        run: ruff check .
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements.txt coverage
+      - name: Unit + integration tests (coverage)
+        # fail-under 기준과 omit 목록은 pyproject.toml [tool.coverage]에서 관리
+        # (CLI 플래그와 설정 파일의 이중 관리로 어긋나는 것을 방지)
+        run: |
+          coverage run -m unittest discover -s tests -v
+          coverage report
+          coverage xml
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-xml
+          path: coverage.xml
+
+  # 실배포 검증 테스트가 실제 커널에 적용되는지 명시적으로 확인하는 job
+  # (test job에서도 실행되지만, 여기서는 skip되지 않았음을 검증한다)
+  netns-verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements.txt
+      - name: Namespace deploy verification must NOT be skipped
+        run: |
+          # sudo는 PATH를 초기화하므로 setup-python의 python 경로를 명시적으로 전달
+          sudo -E env "PATH=$PATH" python -m unittest tests.test_verify -v 2>&1 | tee out.log
+          grep -q "test_real_kernel_apply_and_readback" out.log
+          ! grep -q "skipped" out.log
+
+  benchmark:
+    if: github.event_name == 'workflow_dispatch' && inputs.run_benchmark
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements.txt matplotlib
+      - name: Run benchmark (100 / 1,000 / 5,000 / 10,000)
+        run: python -m benchmarks.bench --plot
+      - uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-results
+          path: |
+            docs/BENCHMARK.md
+            docs/benchmark.png

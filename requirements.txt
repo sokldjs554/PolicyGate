@@ -1,0 +1,4 @@
+# 런타임 의존성은 단 2개입니다.
+# 분석 엔진(policygate/rule.py, analysis/)은 표준 라이브러리만 사용합니다.
+Flask>=3.0
+click>=8.0
